@@ -83,14 +83,7 @@ export function ConversionSettingsPanel({
                       updateSetting("size", Number(e.target.value))
                     }
                     disabled={disabled}
-                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed slider"
-                    style={{
-                      background: `linear-gradient(to right, rgb(var(--primary)) 0%, rgb(var(--primary)) ${
-                        ((settings.size - 180) / (720 - 180)) * 100
-                      }%, rgb(var(--muted)) ${
-                        ((settings.size - 180) / (720 - 180)) * 100
-                      }%, rgb(var(--muted)) 100%)`,
-                    }}
+                    className="w-full h-2 bg-primary rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed slider"
                   />
                 </div>
                 <div className="flex justify-between items-center text-xs sm:text-sm">
@@ -194,7 +187,7 @@ export function ConversionSettingsPanel({
                   className="mt-0.5 flex-shrink-0 text-primary"
                 />
                 <span>
-                  入力すると「©名前」形式の透かしがGIFの右下に追加されます。
+                  入力すると「©名前」形式の透かしがGIFの右下に追加されます。<span className="text-red-600/70">他人の動画には使用しないでください。</span>
                 </span>
               </div>
             </div>

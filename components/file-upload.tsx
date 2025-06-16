@@ -244,8 +244,18 @@ export function FileUpload({ onFileSelect, onUrlSelect, disabled = false }: File
               </button>
             </div>
             
-            <div className="mt-4 text-xs text-secondary">
-              対応: Twitter動画URL (video.twimg.com) • 直接動画ファイルURL (.mp4, .mov, .avi等)
+            <div className="mt-4 space-y-2">
+              <div className="text-xs text-secondary">
+                対応: Twitter動画URL (video.twimg.com) • 直接動画ファイルURL (.mp4, .mov, .avi等)
+              </div>
+              <div className="bg-red-50/70 border border-red-200/50 rounded-lg p-3 text-xs">
+                <p className="text-red-700 font-medium mb-1">⚠️ 重要な法的注意事項</p>
+                <p className="text-red-600 leading-relaxed">
+                  利用者は、第三者の著作権、肖像権、その他の知的財産権を侵害しないことに同意するものとします。
+                  権利者の許可なく他者の動画を使用することは法的責任を伴う場合があります。
+                  利用者による権利侵害に起因する一切の損害について、本サービス運営者は責任を負いません。
+                </p>
+              </div>
             </div>
           </div>
         </div>

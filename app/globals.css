@@ -153,6 +153,7 @@ body {
   appearance: none;
   height: 8px;
   border-radius: 4px;
+  background: var(--muted-dark);
   outline: none;
   transition: all 0.2s;
 }
@@ -163,7 +164,7 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgb(var(--primary));
+  background: var(--primary);
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -179,7 +180,7 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgb(var(--primary));
+  background: var(--primary);
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -193,12 +194,20 @@ body {
 
 .slider:disabled::-webkit-slider-thumb {
   cursor: not-allowed;
-  background: rgb(var(--muted));
+  background: var(--muted);
 }
 
 .slider:disabled::-moz-range-thumb {
   cursor: not-allowed;
-  background: rgb(var(--muted));
+  background: var(--muted);
+}
+
+.slider::-moz-range-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--muted-dark);
+  border: none;
 }
 
 @keyframes pulse {
