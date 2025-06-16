@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     formData.append('image', base64Gif);
     formData.append('type', 'base64');
     formData.append('name', filename || 'converted.gif');
-    formData.append('title', 'Gifizer変換画像');
+    formData.append('title', 'Converted by Gifizer');
 
     const response = await fetch('https://api.imgur.com/3/image', {
       method: 'POST',

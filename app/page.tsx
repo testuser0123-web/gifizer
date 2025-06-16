@@ -333,7 +333,7 @@ export default function Home() {
       formData.append('image', base64Gif);
       formData.append('type', 'base64');
       formData.append('name', selectedFile.name.replace(/\.[^/.]+$/, '') + '.gif');
-      formData.append('title', 'Gifizer変換画像');
+      formData.append('title', 'Converted by Gifizer');
       
       const uploadResponse = await fetch('https://api.imgur.com/3/image', {
         method: 'POST',
