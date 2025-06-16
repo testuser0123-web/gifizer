@@ -38,15 +38,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'GIFデータが見つかりません' }, { status: 400 });
     }
 
-    // Base64データサイズチェック
+    // Base64データサイズをログに出力（警告のみ、エラーにはしない）
     const estimatedSize = (base64Gif.length * 3) / 4; // Base64 -> バイナリ変換の推定サイズ
     console.log(`Base64 string length: ${base64Gif.length}`);
     console.log(`Estimated binary size: ${(estimatedSize / 1024 / 1024).toFixed(2)}MB`);
     
     if (estimatedSize > 10 * 1024 * 1024) { // 10MB
-      return NextResponse.json({ 
-        error: `ファイルサイズが大きすぎます (推定${(estimatedSize / 1024 / 1024).toFixed(1)}MB)。Imgurの制限は10MBです。` 
-      }, { status: 413 });
+      console.warn(`ファイルサイズが10MBを超過 (推定${(estimatedSize / 1024 / 1024).toFixed(1)}MB) - Imgurでエラーになる可能性`);
+      // エラーを返さずに処理を続行（Imgur側で適切にエラーハンドリング）
     }
 
     const clientId = process.env.IMGUR_CLIENT_ID;

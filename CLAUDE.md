@@ -10,6 +10,9 @@ Gifizer is a Next.js application for converting various video formats to silent 
 
 <!-- ユーザーがアイデアやメモを記録するスペースです -->
 
+- ✅ ローカルの開発環境だとアップロードできるのに、vercel にデプロイすると、なぜかファイルが大きすぎますと表示される。
+- ✅ gif 変換はファイルの大きさにかかわらず最後までやって。「Base64 エンコード後のファイルサイズが大きすぎます (38.7MB)。Imgur の制限は 10MB です。」このエラーはいらない。
+
 ### 確認すべき点
 
 - 動画が正しく gif 化されるか

@@ -313,10 +313,11 @@ export default function Home() {
         throw new Error('ファイルが大きすぎてエンコードできませんでした。サイズを小さくしてください。');
       }
       
-      // Base64エンコード後のサイズチェック
+      // Base64エンコード後のサイズをログに出力（エラーにはしない）
       const base64SizeMB = base64Gif.length / 1024 / 1024;
+      console.log(`Base64エンコード後のサイズ: ${base64SizeMB.toFixed(1)}MB`);
       if (base64SizeMB > 10) {
-        throw new Error(`Base64エンコード後のファイルサイズが大きすぎます (${base64SizeMB.toFixed(1)}MB)。Imgurの制限は10MBです。`);
+        console.warn(`Base64サイズが10MBを超過 (${base64SizeMB.toFixed(1)}MB) - アップロード時にエラーになる可能性`);
       }
       
       setProgress(75);
