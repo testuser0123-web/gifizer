@@ -157,9 +157,15 @@ export class FFmpegConverter {
       
       // 著作権テキストを追加
       if (settings.copyright.trim()) {
-        const copyrightText = settings.copyright.trim().replace(/['"\\]/g, '').replace(/:/g, '\\:');
-        videoFilter += `,drawtext=text='© ${copyrightText}':fontcolor=white:fontsize=16:x=10:y=h-30`;
-        console.log('Adding copyright text:', copyrightText);
+        // 安全な文字のみを使用し、危険な文字は除去
+        const copyrightText = settings.copyright.trim()
+          .replace(/[^a-zA-Z0-9\s\-_.()]/g, '')  // 安全な文字のみ許可
+          .substring(0, 20);  // 長さ制限
+        
+        if (copyrightText) {
+          videoFilter += `,drawtext=text='(C) ${copyrightText}':fontcolor=white:fontsize=14:x=10:y=h-25`;
+          console.log('Adding copyright text:', copyrightText);
+        }
       }
       
       const args = [
