@@ -328,6 +328,11 @@ export default function Home() {
       
       // Vercelの4.5MB制限を回避するため、クライアントから直接Imgurにアップロード
       const clientId = process.env.NEXT_PUBLIC_IMGUR_CLIENT_ID || '74ca019c930d8ee';
+      console.log('🔑 Using Client ID:', clientId);
+      console.log('🔑 Environment check:', {
+        hasNextPublic: !!process.env.NEXT_PUBLIC_IMGUR_CLIENT_ID,
+        nodeEnv: process.env.NODE_ENV
+      });
       
       const formData = new FormData();
       formData.append('image', base64Gif);
@@ -335,13 +340,40 @@ export default function Home() {
       formData.append('name', selectedFile.name.replace(/\.[^/.]+$/, '') + '.gif');
       formData.append('title', 'Converted by Gifizer');
       
-      const uploadResponse = await fetch('https://api.imgur.com/3/image', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Client-ID ${clientId}`,
-        },
-        body: formData,
-      });
+      console.log('📤 Starting Imgur upload...');
+      
+      // Retry logic for rate limiting
+      let uploadResponse;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount <= maxRetries) {
+        uploadResponse = await fetch('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Client-ID ${clientId}`,
+          },
+          body: formData,
+        });
+        
+        console.log(`📤 Upload attempt ${retryCount + 1}: status ${uploadResponse.status}`);
+        console.log('📤 Upload response headers:', Object.fromEntries(uploadResponse.headers.entries()));
+        
+        // If successful or non-retryable error, break
+        if (uploadResponse.ok || (uploadResponse.status !== 429 && uploadResponse.status < 500)) {
+          break;
+        }
+        
+        // If rate limited or server error, retry with exponential backoff
+        if (retryCount < maxRetries && (uploadResponse.status === 429 || uploadResponse.status >= 500)) {
+          const waitTime = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          console.log(`⏳ Rate limited/server error, waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          retryCount++;
+        } else {
+          break;
+        }
+      }
       
       if (!uploadResponse.ok) {
         let errorMessage = 'アップロードに失敗しました';
@@ -353,25 +385,30 @@ export default function Home() {
         try {
           if (isJson) {
             const error = await uploadResponse.json();
-            errorMessage = error.error || errorMessage;
+            console.error('❌ Imgur JSON error:', error);
+            errorMessage = error.data?.error || error.error || errorMessage;
           } else {
             // JSONでない場合はtextとして読み取り
             const errorText = await uploadResponse.text();
-            console.error('Error response text:', errorText.substring(0, 200));
+            console.error('❌ Imgur error response text:', errorText.substring(0, 500));
             
             // ステータスコードに基づいてエラーメッセージを決定
             if (uploadResponse.status === 413) {
               errorMessage = 'ファイルが大きすぎます。10MB以下にしてください。';
             } else if (uploadResponse.status === 429) {
-              errorMessage = 'アップロード制限に達しました。時間をおいて再試行してください。';
+              errorMessage = 'Imgurのアップロード制限に達しました。しばらく時間をおいてから再試行してください。（1日の制限: 1,250回）';
+            } else if (uploadResponse.status === 400) {
+              errorMessage = 'リクエストが無効です。Client IDを確認してください。';
+            } else if (uploadResponse.status === 403) {
+              errorMessage = 'アクセスが拒否されました。Client IDが無効の可能性があります。';
             } else if (uploadResponse.status >= 500) {
               errorMessage = 'サーバーエラーが発生しました。しばらく待ってから再試行してください。';
             } else {
-              errorMessage = `アップロードエラー (${uploadResponse.status})`;
+              errorMessage = `アップロードエラー (${uploadResponse.status}): ${errorText.substring(0, 100)}`;
             }
           }
         } catch (readError) {
-          console.error('Failed to read error response:', readError);
+          console.error('❌ Failed to read error response:', readError);
           // レスポンス読み取りに失敗した場合はステータスコードのみ使用
           if (uploadResponse.status === 413) {
             errorMessage = 'ファイルが大きすぎます。10MB以下にしてください。';
