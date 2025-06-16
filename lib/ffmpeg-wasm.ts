@@ -160,14 +160,11 @@ export class FFmpegConverter {
       // 実際の設定を使用した変換
       const videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
       
-      // 著作権テキストの処理 (フィルター無効化、メタデータのみ)
+      // 著作権テキストの処理 (Canvas API後処理で実装)
       if (settings.copyright.trim()) {
         console.log('📝 Copyright info detected:', settings.copyright);
-        console.log('⚠️ Visual overlay not supported in FFmpeg WASM (no font files)');
-        console.log('💡 Copyright information will be stored in conversion metadata only');
-        
-        // drawtext フィルターは FFmpeg WASM でフォントファイルが必要なため使用不可
-        // 著作権情報はメタデータとして保存され、履歴に表示される
+        console.log('💡 Watermark will be added using Canvas API post-processing');
+        // FFmpeg変換は透かしなしで実行し、後でCanvas APIで透かしを追加
       }
       
       const args = [
@@ -293,6 +290,21 @@ export class FFmpegConverter {
         // クリーンアップエラーは無視
       }
 
+      onProgress?.({ step: 'converting', progress: 95, message: '透かしを追加中...' });
+
+      // 著作権テキストがある場合、Canvas APIで透かしを追加
+      if (settings.copyright.trim()) {
+        try {
+          console.log('🎨 Adding watermark using Canvas API...');
+          const watermarkedData = await this.addWatermarkToGif(data, settings.copyright.trim());
+          onProgress?.({ step: 'completed', progress: 100, message: '透かし付きGIF変換完了！' });
+          return watermarkedData;
+        } catch (watermarkError) {
+          console.warn('⚠️ Watermark addition failed, using original GIF:', watermarkError);
+          // 透かし追加に失敗した場合は元のGIFを返す
+        }
+      }
+
       onProgress?.({ step: 'completed', progress: 100, message: '変換完了！' });
 
       return data;
@@ -309,6 +321,74 @@ export class FFmpegConverter {
       
       onProgress?.({ step: 'error', progress: 0, message: '変換中にエラーが発生しました' });
       throw error;
+    }
+  }
+
+  // Canvas APIを使用してGIFに透かしを追加
+  private async addWatermarkToGif(gifData: Uint8Array, copyrightText: string): Promise<Uint8Array> {
+    console.log('🖼️ Starting Canvas API watermark process...');
+    
+    // GIFをBlobに変換
+    const gifBlob = new Blob([gifData], { type: 'image/gif' });
+    const gifUrl = URL.createObjectURL(gifBlob);
+    
+    try {
+      // Imageオブジェクトを作成してGIFをロード
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = gifUrl;
+      });
+      
+      console.log(`📐 GIF dimensions: ${img.width}x${img.height}`);
+      
+      // Canvasを作成
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not available');
+      
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // GIFを描画
+      ctx.drawImage(img, 0, 0);
+      
+      // 透かしテキストを追加
+      const fontSize = Math.max(12, Math.min(img.width / 20, 24)); // 動的フォントサイズ
+      ctx.font = `${fontSize}px Arial, sans-serif`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; // 半透明白色
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)'; // 黒い縁取り
+      ctx.lineWidth = 1;
+      
+      const watermarkText = `© ${copyrightText}`;
+      const textMetrics = ctx.measureText(watermarkText);
+      const x = img.width - textMetrics.width - 10; // 右下に配置
+      const y = img.height - 10;
+      
+      // テキストを描画 (縁取り + 塗りつぶし)
+      ctx.strokeText(watermarkText, x, y);
+      ctx.fillText(watermarkText, x, y);
+      
+      console.log(`✍️ Added watermark: "${watermarkText}" at (${x}, ${y})`);
+      
+      // Canvasから新しいGIFデータを取得
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            reject(new Error('Failed to create blob from canvas'));
+            return;
+          }
+          
+          // BlobをUint8Arrayに変換
+          const arrayBuffer = await blob.arrayBuffer();
+          resolve(new Uint8Array(arrayBuffer));
+        }, 'image/gif');
+      });
+      
+    } finally {
+      // メモリクリーンアップ
+      URL.revokeObjectURL(gifUrl);
     }
   }
 
