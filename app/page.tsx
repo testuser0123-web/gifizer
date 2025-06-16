@@ -83,8 +83,19 @@ export default function Home() {
     });
     
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'サーバーサイド変換に失敗しました');
+      let errorMessage = 'サーバーサイド変換に失敗しました';
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json();
+          errorMessage = error.error || errorMessage;
+        } else {
+          errorMessage = `サーバー変換エラー (${response.status})`;
+        }
+      } catch {
+        errorMessage = `サーバー変換エラー (${response.status})`;
+      }
+      throw new Error(errorMessage);
     }
     
     const result = await response.json();
@@ -106,8 +117,19 @@ export default function Home() {
     });
     
     if (!uploadResponse.ok) {
-      const error = await uploadResponse.json();
-      throw new Error(error.error || 'アップロードに失敗しました');
+      let errorMessage = 'アップロードに失敗しました';
+      try {
+        const contentType = uploadResponse.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const error = await uploadResponse.json();
+          errorMessage = error.error || errorMessage;
+        } else {
+          errorMessage = `アップロードエラー (${uploadResponse.status})`;
+        }
+      } catch {
+        errorMessage = `アップロードエラー (${uploadResponse.status})`;
+      }
+      throw new Error(errorMessage);
     }
     
     const uploadResult = await uploadResponse.json();
@@ -305,15 +327,34 @@ export default function Home() {
       
       if (!uploadResponse.ok) {
         let errorMessage = 'アップロードに失敗しました';
+        
+        // Content-Typeを確認してJSONかどうか判断
+        const contentType = uploadResponse.headers.get('content-type');
+        const isJson = contentType && contentType.includes('application/json');
+        
         try {
-          const error = await uploadResponse.json();
-          errorMessage = error.error || errorMessage;
-        } catch (parseError) {
-          console.error('Error response parse failed:', parseError);
-          // レスポンスがJSONでない場合（HTMLエラーページなど）
-          const errorText = await uploadResponse.text();
-          console.error('Error response text:', errorText.substring(0, 200));
-          
+          if (isJson) {
+            const error = await uploadResponse.json();
+            errorMessage = error.error || errorMessage;
+          } else {
+            // JSONでない場合はtextとして読み取り
+            const errorText = await uploadResponse.text();
+            console.error('Error response text:', errorText.substring(0, 200));
+            
+            // ステータスコードに基づいてエラーメッセージを決定
+            if (uploadResponse.status === 413) {
+              errorMessage = 'ファイルが大きすぎます。10MB以下にしてください。';
+            } else if (uploadResponse.status === 429) {
+              errorMessage = 'アップロード制限に達しました。時間をおいて再試行してください。';
+            } else if (uploadResponse.status >= 500) {
+              errorMessage = 'サーバーエラーが発生しました。しばらく待ってから再試行してください。';
+            } else {
+              errorMessage = `アップロードエラー (${uploadResponse.status})`;
+            }
+          }
+        } catch (readError) {
+          console.error('Failed to read error response:', readError);
+          // レスポンス読み取りに失敗した場合はステータスコードのみ使用
           if (uploadResponse.status === 413) {
             errorMessage = 'ファイルが大きすぎます。10MB以下にしてください。';
           } else if (uploadResponse.status === 429) {
@@ -322,6 +363,7 @@ export default function Home() {
             errorMessage = `アップロードエラー (${uploadResponse.status})`;
           }
         }
+        
         throw new Error(errorMessage);
       }
       
