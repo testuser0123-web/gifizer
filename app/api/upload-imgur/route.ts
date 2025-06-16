@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
 
     // Base64データサイズチェック
     const estimatedSize = (base64Gif.length * 3) / 4; // Base64 -> バイナリ変換の推定サイズ
+    console.log(`Base64 string length: ${base64Gif.length}`);
+    console.log(`Estimated binary size: ${(estimatedSize / 1024 / 1024).toFixed(2)}MB`);
+    
     if (estimatedSize > 10 * 1024 * 1024) { // 10MB
       return NextResponse.json({ 
         error: `ファイルサイズが大きすぎます (推定${(estimatedSize / 1024 / 1024).toFixed(1)}MB)。Imgurの制限は10MBです。` 

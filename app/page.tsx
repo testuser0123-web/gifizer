@@ -294,11 +294,6 @@ export default function Home() {
       setProgress(70);
       
       // Step 2: ファイルサイズチェックとBase64エンコード
-      const maxFileSize = 10 * 1024 * 1024; // 10MB (Imgur制限)
-      if (gifData.length > maxFileSize) {
-        throw new Error(`ファイルサイズが大きすぎます (${(gifData.length / 1024 / 1024).toFixed(1)}MB)。Imgurの制限は10MBです。`);
-      }
-      
       console.log(`GIF size: ${(gifData.length / 1024 / 1024).toFixed(2)}MB`);
       
       // 効率的なBase64エンコード（メモリ使用量を最適化）
@@ -311,9 +306,17 @@ export default function Home() {
         }
         base64Gif = btoa(chunks.join(''));
         console.log(`Base64 encoded size: ${(base64Gif.length / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`Original GIF size: ${(gifData.length / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`Base64 vs Original ratio: ${(base64Gif.length / gifData.length).toFixed(2)}x`);
       } catch (encodingError) {
         console.error('Base64 encoding failed:', encodingError);
         throw new Error('ファイルが大きすぎてエンコードできませんでした。サイズを小さくしてください。');
+      }
+      
+      // Base64エンコード後のサイズチェック
+      const base64SizeMB = base64Gif.length / 1024 / 1024;
+      if (base64SizeMB > 10) {
+        throw new Error(`Base64エンコード後のファイルサイズが大きすぎます (${base64SizeMB.toFixed(1)}MB)。Imgurの制限は10MBです。`);
       }
       
       setProgress(75);
