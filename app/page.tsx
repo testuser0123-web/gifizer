@@ -566,6 +566,21 @@ export default function Home() {
             </p>
           </div>
 
+          {/* Notice Banner */}
+          <div className="w-full max-w-4xl px-4 sm:px-6">
+            <div className="bg-yellow-50/70 border border-yellow-200/50 rounded-lg p-3 sm:p-4 backdrop-blur-sm">
+              <div className="flex items-start gap-3">
+                <span className="text-yellow-600 text-lg flex-shrink-0 mt-0.5">📢</span>
+                <div>
+                  <h3 className="font-semibold text-yellow-800 text-sm sm:text-base mb-1">お知らせ</h3>
+                  <p className="text-yellow-700 text-xs sm:text-sm leading-relaxed">
+                    変換後のサイズが大きすぎるとアップロードできない場合があります。その場合は適宜設定を調整してください。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* File Upload Section */}
           {!selectedFile && !isProcessing && !completedResult && (
             <div className="w-full max-w-2xl mx-auto px-4">

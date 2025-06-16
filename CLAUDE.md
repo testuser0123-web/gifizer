@@ -111,6 +111,7 @@ wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
 - ✅ 変換のエラーを直してください。
 - ✅ 動画の長さは無制限にしてください。
 - ✅ 変換品質で「高」のほうが色数が少なくなってるのを直して。
+- ✅ ユーザー向けお知らせバナーを追加：「変換後のサイズが大きすぎるとアップロードできない場合があります。その場合は適宜設定を調整してください。」
 
 ## Development Commands
 
