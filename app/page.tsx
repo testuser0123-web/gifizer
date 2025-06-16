@@ -9,7 +9,7 @@ import { ConversionSettingsPanel } from '@/components/conversion-settings';
 import { ProgressIndicator, type ProgressStep } from '@/components/progress-indicator';
 import { HistoryPanel } from '@/components/history-panel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlay, faCopy, faExternalLink, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faCopy, faExternalLink, faCheck, faDownload } from '@fortawesome/free-solid-svg-icons';
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -27,6 +27,14 @@ export default function Home() {
     settings: ConversionSettings;
   } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [localGifResult, setLocalGifResult] = useState<{
+    gifData: Uint8Array;
+    filename: string;
+    originalFilename: string;
+    size: number;
+    settings: ConversionSettings;
+    uploadError: string;
+  } | null>(null);
   const [conversionError, setConversionError] = useState<string | null>(null);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const converterRef = useRef<FFmpegConverter | null>(null);
@@ -364,7 +372,31 @@ export default function Home() {
           }
         }
         
-        throw new Error(errorMessage);
+        // アップロード失敗時はローカルGIFとして表示
+        console.warn('Upload failed, displaying local GIF:', errorMessage);
+        
+        setLocalGifResult({
+          gifData: gifData,
+          filename: selectedFile.name.replace(/\.[^/.]+$/, '') + '.gif',
+          originalFilename: selectedFile.name,
+          size: gifData.length,
+          settings: settings,
+          uploadError: errorMessage
+        });
+        
+        setProgressStep('completed');
+        setIsProcessing(false);
+        
+        // 完了音を再生（ローカル保存として）
+        try {
+          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+PyvmQcAjZFOUFTSfHKdyQAgP');
+          audio.volume = 0.3;
+          await audio.play();
+        } catch (e) {
+          console.log('音声再生に失敗:', e);
+        }
+        
+        return; // 処理を完了
       }
       
       let uploadResult;
@@ -372,7 +404,20 @@ export default function Home() {
         uploadResult = await uploadResponse.json();
       } catch (parseError) {
         console.error('Upload response parse failed:', parseError);
-        throw new Error('アップロード完了後のレスポンス解析に失敗しました');
+        
+        // JSON解析失敗もローカルGIFとして表示
+        setLocalGifResult({
+          gifData: gifData,
+          filename: selectedFile.name.replace(/\.[^/.]+$/, '') + '.gif',
+          originalFilename: selectedFile.name,
+          size: gifData.length,
+          settings: settings,
+          uploadError: 'アップロード完了後のレスポンス解析に失敗しました'
+        });
+        
+        setProgressStep('completed');
+        setIsProcessing(false);
+        return;
       }
       setProgress(100);
       
@@ -431,6 +476,7 @@ export default function Home() {
   const handleReset = () => {
     setSelectedFile(null);
     setCompletedResult(null);
+    setLocalGifResult(null);
     setProgressStep('converting');
     setProgress(0);
     setConversionError(null);
@@ -585,7 +631,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Completed Result */}
+          {/* Completed Result - Successful Upload */}
           {completedResult && !isProcessing && (
             <div className="w-full max-w-2xl px-4">
               <div className="card p-4 sm:p-6 text-center space-y-4 sm:space-y-5 shadow-xl">
@@ -645,6 +691,80 @@ export default function Home() {
                   
                   <button
                     onClick={handleReset}
+                    className="btn btn-secondary text-sm sm:text-base px-4 py-2 sm:px-6 sm:py-3"
+                  >
+                    新しいファイルを変換
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Local GIF Result - Upload Failed */}
+          {localGifResult && !isProcessing && (
+            <div className="w-full max-w-2xl px-4">
+              <div className="card p-4 sm:p-6 text-center space-y-4 sm:space-y-5 shadow-xl border-yellow-500/20">
+                <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto">
+                  <span className="text-yellow-500 text-2xl">⚠️</span>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold text-yellow-600 mb-2">変換完了（ローカル保存）</h3>
+                  <p className="text-sm sm:text-base text-secondary mb-2">GIFの変換は完了しましたが、アップロードに失敗しました</p>
+                  <p className="text-xs sm:text-sm text-yellow-600 bg-yellow-50 p-2 rounded border border-yellow-200">
+                    エラー: {localGifResult.uploadError}
+                  </p>
+                </div>
+
+                {/* Local GIF Preview */}
+                <div className="flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={URL.createObjectURL(new Blob([localGifResult.gifData], { type: 'image/gif' }))}
+                    alt={localGifResult.filename}
+                    className="max-w-full max-h-64 rounded-lg border border-border object-contain"
+                  />
+                </div>
+
+                {/* File Info */}
+                <div className="bg-muted/50 rounded-lg p-3 sm:p-4 text-left">
+                  <h4 className="font-medium text-foreground mb-2 text-sm sm:text-base">ファイル情報</h4>
+                  <div className="space-y-1 text-xs sm:text-sm text-secondary">
+                    <div className="truncate">ファイル名: {localGifResult.filename}</div>
+                    <div>元ファイル: {localGifResult.originalFilename}</div>
+                    <div>サイズ: {(localGifResult.size / (1024 * 1024)).toFixed(2)} MB</div>
+                    <div>設定: {localGifResult.settings.size}, {localGifResult.settings.quality}品質, {localGifResult.settings.frameRate}fps</div>
+                    {localGifResult.settings.copyright && (
+                      <div className="truncate">著作権: © {localGifResult.settings.copyright}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
+                  <button
+                    onClick={() => {
+                      const blob = new Blob([localGifResult.gifData], { type: 'image/gif' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = localGifResult.filename;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="btn btn-primary text-sm sm:text-base px-4 py-2 sm:px-6 sm:py-3"
+                  >
+                    <FontAwesomeIcon icon={faDownload} />
+                    GIFをダウンロード
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setLocalGifResult(null);
+                      handleReset();
+                    }}
                     className="btn btn-secondary text-sm sm:text-base px-4 py-2 sm:px-6 sm:py-3"
                   >
                     新しいファイルを変換
