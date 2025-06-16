@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { getFFmpegConverter, type ConversionProgress, type ConversionSettings, FFmpegConverter } from '@/lib/ffmpeg-wasm';
+import { getVideoMetadata, formatDuration, formatFileSize, type VideoMetadata } from '@/lib/video-utils';
 import { Header } from '@/components/header';
 import { FileUpload } from '@/components/file-upload';
 import { ConversionSettingsPanel } from '@/components/conversion-settings';
@@ -13,6 +14,8 @@ import { faPlay, faCopy, faExternalLink, faCheck, faDownload, faSpinner } from '
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(null);
+  const [metadataError, setMetadataError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoadingUrl, setIsLoadingUrl] = useState(false);
   const [progressStep, setProgressStep] = useState<ProgressStep>('converting');
@@ -65,9 +68,23 @@ export default function Home() {
     }
   }, [ffmpegLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
+    setVideoMetadata(null);
+    setMetadataError(null);
     console.log('Selected file:', file.name, file.size, file.type);
+    
+    // Extract video metadata
+    try {
+      const metadata = await getVideoMetadata(file);
+      setVideoMetadata(metadata);
+      setMetadataError(null);
+      console.log('Video metadata:', metadata);
+    } catch (error) {
+      console.error('Failed to get video metadata:', error);
+      setVideoMetadata(null);
+      setMetadataError(error instanceof Error ? error.message : 'メタデータの取得に失敗しました');
+    }
   };
 
   const handleUrlSelect = async (url: string) => {
@@ -95,6 +112,17 @@ export default function Home() {
       const file = new File([blob], filename, { type: blob.type || 'video/mp4' });
       
       setSelectedFile(file);
+      
+      // Extract video metadata
+      try {
+        const metadata = await getVideoMetadata(file);
+        setVideoMetadata(metadata);
+        console.log('Video metadata:', metadata);
+      } catch (metadataError) {
+        console.error('Failed to get video metadata:', metadataError);
+        setVideoMetadata(null);
+      }
+      
       setIsLoadingUrl(false);
       console.log('URL video loaded:', file.name, file.size, file.type);
     } catch (error) {
@@ -578,6 +606,8 @@ export default function Home() {
 
   const handleReset = () => {
     setSelectedFile(null);
+    setVideoMetadata(null);
+    setMetadataError(null);
     setCompletedResult(null);
     setLocalGifResult(null);
     setProgressStep('converting');
@@ -709,12 +739,29 @@ export default function Home() {
                   <div className="min-w-0 flex-1">
                     <h4 className="font-medium text-foreground text-sm sm:text-base">選択されたファイル</h4>
                     <p className="text-xs sm:text-sm text-secondary truncate">{selectedFile.name}</p>
-                    <p className="text-xs text-secondary">
-                      {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-                    </p>
+                    <div className="text-xs text-secondary space-y-1">
+                      <p>{formatFileSize(selectedFile.size)}</p>
+                      {videoMetadata && (
+                        <>
+                          <p>長さ: {formatDuration(videoMetadata.duration)}</p>
+                          <p>解像度: {videoMetadata.width} × {videoMetadata.height}</p>
+                          {/* <p>アスペクト比: {videoMetadata.aspectRatio.toFixed(2)}</p> */}
+                        </>
+                      )}
+                      {metadataError && (
+                        <p className="text-orange-600 text-xs">ℹ️ {metadataError}</p>
+                      )}
+                      {!videoMetadata && !metadataError && (
+                        <p className="text-yellow-600">再生時間取得中...</p>
+                      )}
+                    </div>
                   </div>
                   <button
-                    onClick={() => setSelectedFile(null)}
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setVideoMetadata(null);
+                      setMetadataError(null);
+                    }}
                     className="btn btn-secondary text-xs sm:text-sm ml-3 px-3 py-2"
                   >
                     クリア
@@ -727,6 +774,8 @@ export default function Home() {
                 settings={settings}
                 onSettingsChange={setSettings}
                 disabled={isProcessing}
+                videoMetadata={videoMetadata}
+                metadataError={metadataError}
               />
 
               {/* Start Conversion Button */}

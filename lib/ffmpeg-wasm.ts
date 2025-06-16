@@ -449,6 +449,96 @@ export class FFmpegConverter {
     }
   }
 
+  /**
+   * Extract video metadata using FFmpeg probe
+   * @param file - Video file to analyze
+   * @returns Promise with extracted metadata
+   */
+  async extractMetadata(file: File): Promise<{ duration: number; width: number; height: number; aspectRatio: number; fileSize: number }> {
+    if (!this.loaded || !this.ffmpeg) {
+      throw new Error('FFmpeg is not loaded');
+    }
+
+    const inputFileName = 'probe_input.mp4';
+    const capturedLogs: string[] = [];
+    let duration = 0;
+    let width = 0;
+    let height = 0;
+
+    // Set up log capture to extract metadata
+    const logHandler = ({ message }: { message: string }) => {
+      capturedLogs.push(message);
+      
+      // Parse duration from FFmpeg logs
+      const durationMatch = message.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+      if (durationMatch) {
+        const hours = parseInt(durationMatch[1]);
+        const minutes = parseInt(durationMatch[2]);
+        const seconds = parseFloat(durationMatch[3]);
+        duration = hours * 3600 + minutes * 60 + seconds;
+      }
+      
+      // Parse resolution from FFmpeg logs
+      const resolutionMatch = message.match(/Video:.*?(\d{3,5})x(\d{3,5})/);
+      if (resolutionMatch) {
+        width = parseInt(resolutionMatch[1]);
+        height = parseInt(resolutionMatch[2]);
+      }
+    };
+
+    try {
+      // Write file to FFmpeg virtual filesystem
+      const fileData = await fetchFile(file);
+      await this.ffmpeg.writeFile(inputFileName, fileData);
+      
+      // Set up log handler
+      this.ffmpeg.on('log', logHandler);
+      
+      // Use FFmpeg to probe the video file
+      try {
+        await this.ffmpeg.exec(['-i', inputFileName, '-f', 'null', '-']);
+      } catch {
+        // Expected to fail, we're only interested in the metadata logs
+      }
+      
+      // Remove log handler
+      this.ffmpeg.off('log', logHandler);
+      
+      // Clean up
+      await this.ffmpeg.deleteFile(inputFileName);
+      
+      console.log('FFmpeg metadata extracted:', { duration, width, height });
+      
+      // Validate extracted metadata
+      if (duration > 0 && width > 0 && height > 0) {
+        return {
+          duration,
+          width,
+          height,
+          aspectRatio: width / height,
+          fileSize: file.size
+        };
+      } else {
+        throw new Error('Could not extract valid metadata from FFmpeg logs');
+      }
+      
+    } catch (ffmpegError) {
+      // Remove log handler in case of error
+      this.ffmpeg.off('log', logHandler);
+      
+      // Clean up on error
+      try {
+        await this.ffmpeg.deleteFile(inputFileName);
+      } catch {
+        // Ignore cleanup errors
+      }
+      
+      console.error('FFmpeg metadata extraction error:', ffmpegError);
+      console.log('Captured FFmpeg logs:', capturedLogs.slice(-5));
+      throw new Error('FFmpeg metadata extraction failed');
+    }
+  }
+
   terminate(): void {
     if (this.ffmpeg) {
       this.ffmpeg.terminate();
