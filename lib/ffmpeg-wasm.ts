@@ -158,20 +158,22 @@ export class FFmpegConverter {
       console.log('Input file size:', fileData.byteLength, 'bytes');
 
       // 実際の設定を使用した変換
-      const videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
+      let videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
       
-      // 著作権テキストを追加 (一時的に無効化してテスト)
+      // 著作権テキストを追加 (最小限の実装)
       if (settings.copyright.trim()) {
-        console.log('⚠️ Copyright text feature temporarily disabled for debugging');
-        console.log('  - Original text:', settings.copyright);
-        // TODO: Re-enable after fixing drawtext filter
-        // const copyrightText = settings.copyright.trim()
-        //   .replace(/[^a-zA-Z0-9\s\-_.()]/g, '')
-        //   .substring(0, 20);
-        // if (copyrightText) {
-        //   videoFilter += `,drawtext=text='(C) ${copyrightText}':fontcolor=white:fontsize=14:x=10:y=h-25`;
-        //   console.log('Adding copyright text:', copyrightText);
-        // }
+        // 英数字のみを許可し、短く制限
+        const copyrightText = settings.copyright.trim()
+          .replace(/[^a-zA-Z0-9]/g, '')  // 英数字のみ
+          .substring(0, 10);  // 10文字以下
+        
+        if (copyrightText.length >= 2) {  // 最低2文字必要
+          // 最もシンプルなdrawtext - fontfileを指定しない
+          videoFilter += `,drawtext=text=${copyrightText}:fontcolor=white:fontsize=12:x=5:y=5`;
+          console.log('Adding copyright text (minimal):', copyrightText);
+        } else {
+          console.log('Copyright text too short or no valid characters, skipping');
+        }
       }
       
       const args = [
