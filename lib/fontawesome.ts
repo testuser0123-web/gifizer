@@ -1,0 +1,60 @@
+import { library } from '@fortawesome/fontawesome-svg-core';
+import {
+  faUpload,
+  faDownload,
+  faTrash,
+  faCog,
+  faPlay,
+  faStop,
+  faPause,
+  faVolumeUp,
+  faShare,
+  faCopy,
+  faCheck,
+  faSpinner,
+  faExclamationTriangle,
+  faInfoCircle,
+  faMoon,
+  faSun,
+  faExpand,
+  faCompress,
+  faFilm,
+  faImage,
+  faCloudUpload,
+  faHistory,
+  faTimes,
+  faEdit,
+  faSave
+} from '@fortawesome/free-solid-svg-icons';
+import {
+  faCopyright
+} from '@fortawesome/free-regular-svg-icons';
+
+library.add(
+  faUpload,
+  faDownload,
+  faTrash,
+  faCog,
+  faPlay,
+  faStop,
+  faPause,
+  faVolumeUp,
+  faShare,
+  faCopy,
+  faCheck,
+  faSpinner,
+  faExclamationTriangle,
+  faInfoCircle,
+  faMoon,
+  faSun,
+  faExpand,
+  faCompress,
+  faFilm,
+  faImage,
+  faCloudUpload,
+  faHistory,
+  faTimes,
+  faEdit,
+  faSave,
+  faCopyright
+);
