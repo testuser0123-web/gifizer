@@ -343,7 +343,7 @@ export default function Home() {
       console.log('📤 Starting Imgur upload...');
       
       // Retry logic for rate limiting
-      let uploadResponse;
+      let uploadResponse: Response | null = null;
       let retryCount = 0;
       const maxRetries = 3;
       
@@ -373,6 +373,10 @@ export default function Home() {
         } else {
           break;
         }
+      }
+      
+      if (!uploadResponse) {
+        throw new Error('アップロードリクエストが失敗しました');
       }
       
       if (!uploadResponse.ok) {
