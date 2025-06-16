@@ -151,8 +151,8 @@ export function ConversionSettingsPanel({
               <div className="flex items-start gap-3 text-xs sm:text-sm text-secondary bg-muted/30 p-3 rounded-lg">
                 <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 flex-shrink-0 text-primary" />
                 <span>
-                  入力すると「© 名前」形式でGIFの右下に透かしが追加されます。
-                  日本語（ひらがな・カタカナ・漢字）、英数字、記号に対応。長すぎるテキストは自動調整されます。
+                  著作権情報は変換履歴に記録・表示されます。
+                  現在、GIFアニメーションを保持するため視覚的透かしは一時的に無効化されています。
                 </span>
               </div>
             </div>

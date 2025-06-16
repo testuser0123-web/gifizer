@@ -292,17 +292,19 @@ export class FFmpegConverter {
 
       onProgress?.({ step: 'converting', progress: 95, message: '透かしを追加中...' });
 
-      // 著作権テキストがある場合、Canvas APIで透かしを追加
+      // 著作権テキストがある場合の処理（アニメーション保持のため一時無効化）
       if (settings.copyright.trim()) {
-        try {
-          console.log('🎨 Adding watermark using Canvas API...');
-          const watermarkedData = await this.addWatermarkToGif(data, settings.copyright.trim());
-          onProgress?.({ step: 'completed', progress: 100, message: '透かし付きGIF変換完了！' });
-          return watermarkedData;
-        } catch (watermarkError) {
-          console.warn('⚠️ Watermark addition failed, using original GIF:', watermarkError);
-          // 透かし追加に失敗した場合は元のGIFを返す
-        }
+        console.log('📝 Copyright info detected:', settings.copyright);
+        console.warn('⚠️ Visual watermark temporarily disabled to preserve GIF animation');
+        console.log('💡 Copyright information is stored in conversion history');
+        
+        // Canvas APIによる透かし追加はGIFアニメーションを静止画に変換してしまうため
+        // 一時的に無効化し、メタデータのみに著作権情報を保存
+        
+        // TODO: 将来の改善案:
+        // 1. gif.js + Canvas APIでフレーム毎に透かし追加
+        // 2. FFmpeg WASMでフォント埋め込み
+        // 3. サーバーサイドでの透かし処理
       }
 
       onProgress?.({ step: 'completed', progress: 100, message: '変換完了！' });
