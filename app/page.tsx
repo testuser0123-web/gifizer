@@ -9,11 +9,12 @@ import { ConversionSettingsPanel } from '@/components/conversion-settings';
 import { ProgressIndicator, type ProgressStep } from '@/components/progress-indicator';
 import { HistoryPanel } from '@/components/history-panel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlay, faCopy, faExternalLink, faCheck, faDownload } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faCopy, faExternalLink, faCheck, faDownload, faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoadingUrl, setIsLoadingUrl] = useState(false);
   const [progressStep, setProgressStep] = useState<ProgressStep>('converting');
   const [progress, setProgress] = useState(0);
   const [completedResult, setCompletedResult] = useState<{
@@ -67,6 +68,40 @@ export default function Home() {
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
     console.log('Selected file:', file.name, file.size, file.type);
+  };
+
+  const handleUrlSelect = async (url: string) => {
+    try {
+      console.log('Fetching video from URL:', url);
+      setConversionError(null);
+      setIsLoadingUrl(true);
+      
+      // サーバーサイドプロキシ経由で動画をフェッチ
+      const response = await fetch('/api/fetch-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `動画の取得に失敗しました (${response.status})`);
+      }
+      
+      const blob = await response.blob();
+      const filename = url.split('/').pop()?.split('?')[0] || 'twitter-video.mp4';
+      const file = new File([blob], filename, { type: blob.type || 'video/mp4' });
+      
+      setSelectedFile(file);
+      setIsLoadingUrl(false);
+      console.log('URL video loaded:', file.name, file.size, file.type);
+    } catch (error) {
+      console.error('URL fetch error:', error);
+      setConversionError(error instanceof Error ? error.message : 'URLからの動画取得に失敗しました');
+      setIsLoadingUrl(false);
+    }
   };
 
   // サーバーサイド変換のフォールバック関数
@@ -549,6 +584,7 @@ export default function Home() {
     setProgress(0);
     setConversionError(null);
     setIsProcessing(false); // 処理中フラグもリセット
+    setIsLoadingUrl(false); // URL読み込みフラグもリセット
   };
 
   // サンプル動画でのテスト関数
@@ -623,13 +659,14 @@ export default function Home() {
           </div>
 
           {/* File Upload Section */}
-          {!selectedFile && !isProcessing && !completedResult && (
+          {!selectedFile && !isProcessing && !completedResult && !isLoadingUrl && (
             <div className="w-full max-w-2xl mx-auto px-4">
               <div className="card card-lg">
                 <div className="p-6 sm:p-8">
                   <FileUpload 
                     onFileSelect={handleFileSelect}
-                    disabled={isProcessing}
+                    onUrlSelect={handleUrlSelect}
+                    disabled={isProcessing || isLoadingUrl}
                   />
                   
                   {/* Development Test Button - 開発環境でのみ表示 */}
@@ -644,6 +681,21 @@ export default function Home() {
                       </button>
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* URL Loading Screen */}
+          {isLoadingUrl && (
+            <div className="w-full max-w-2xl px-4">
+              <div className="card p-6 text-center space-y-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                  <FontAwesomeIcon icon={faSpinner} className="text-primary text-2xl animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">動画を読み込み中...</h3>
+                  <p className="text-sm text-secondary">URLから動画をダウンロードしています</p>
                 </div>
               </div>
             </div>

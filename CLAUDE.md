@@ -10,9 +10,8 @@ Gifizer is a Next.js application for converting various video formats to silent 
 
 <!-- ユーザーがアイデアやメモを記録するスペースです -->
 
-- 長い動画が Load failed になる問題。
-- 変換後のファイルのサイズを 1~10 でスライドバーで指定できるとよい。
 - Twitter の動画のリンクを貼れるようにする。
+- https://video.twimg.com/amplify_video/1933829103767191552/vid/avc1/1080x1920/u2BGS7OlZS1aibLh.mp4
 
 - ✅ ローカルの開発環境だとアップロードできるのに、vercel にデプロイすると、なぜかファイルが大きすぎますと表示される。
   → **解決**: Vercel の 4.5MB 制限が原因。クライアントから直接 Imgur API にアップロードするよう変更。
