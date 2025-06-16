@@ -322,19 +322,25 @@ export default function Home() {
       
       setProgress(75);
       
-      // Step 3: Imgurにアップロード
+      // Step 3: Imgurにアップロード（直接クライアントから）
       setProgressStep('uploading-imgur');
       setProgress(80);
       
-      const uploadResponse = await fetch('/api/upload-imgur', {
+      // Vercelの4.5MB制限を回避するため、クライアントから直接Imgurにアップロード
+      const clientId = process.env.NEXT_PUBLIC_IMGUR_CLIENT_ID || '74ca019c930d8ee';
+      
+      const formData = new FormData();
+      formData.append('image', base64Gif);
+      formData.append('type', 'base64');
+      formData.append('name', selectedFile.name.replace(/\.[^/.]+$/, '') + '.gif');
+      formData.append('title', 'Gifizer変換画像');
+      
+      const uploadResponse = await fetch('https://api.imgur.com/3/image', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Authorization': `Client-ID ${clientId}`,
         },
-        body: JSON.stringify({
-          base64Gif: base64Gif,
-          filename: selectedFile.name.replace(/\.[^/.]+$/, '') + '.gif'
-        }),
+        body: formData,
       });
       
       if (!uploadResponse.ok) {
@@ -403,9 +409,9 @@ export default function Home() {
         return; // 処理を完了
       }
       
-      let uploadResult;
+      let imgurData;
       try {
-        uploadResult = await uploadResponse.json();
+        imgurData = await uploadResponse.json();
       } catch (parseError) {
         console.error('Upload response parse failed:', parseError);
         
@@ -423,6 +429,23 @@ export default function Home() {
         setIsProcessing(false);
         return;
       }
+      
+      if (!imgurData.success) {
+        // Imgur APIエラーもローカルGIFとして表示
+        setLocalGifResult({
+          gifData: gifData,
+          filename: selectedFile.name.replace(/\.[^/.]+$/, '') + '.gif',
+          originalFilename: selectedFile.name,
+          size: gifData.length,
+          settings: settings,
+          uploadError: 'Imgurアップロードが失敗しました'
+        });
+        
+        setProgressStep('completed');
+        setIsProcessing(false);
+        return;
+      }
+      
       setProgress(100);
       
       // 結果をlocalStorageに保存
@@ -430,8 +453,8 @@ export default function Home() {
         id: Date.now().toString(),
         filename: selectedFile.name.replace(/\.[^/.]+$/, '') + '.gif',
         originalFilename: selectedFile.name,
-        imgurLink: uploadResult.link,
-        deleteHash: uploadResult.deleteHash,
+        imgurLink: imgurData.data.link,
+        deleteHash: imgurData.data.deletehash,
         size: gifData.length,
         timestamp: new Date().toISOString(),
         settings: settings
