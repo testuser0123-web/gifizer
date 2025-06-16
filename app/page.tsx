@@ -263,13 +263,28 @@ export default function Home() {
       
       setProgress(70);
       
-      // Step 2: Base64エンコード（効率的な変換）
-      const chunks = [];
-      const chunkSize = 0x8000; // 32KB chunks
-      for (let i = 0; i < gifData.length; i += chunkSize) {
-        chunks.push(String.fromCharCode(...gifData.slice(i, i + chunkSize)));
+      // Step 2: ファイルサイズチェックとBase64エンコード
+      const maxFileSize = 10 * 1024 * 1024; // 10MB (Imgur制限)
+      if (gifData.length > maxFileSize) {
+        throw new Error(`ファイルサイズが大きすぎます (${(gifData.length / 1024 / 1024).toFixed(1)}MB)。Imgurの制限は10MBです。`);
       }
-      const base64Gif = btoa(chunks.join(''));
+      
+      console.log(`GIF size: ${(gifData.length / 1024 / 1024).toFixed(2)}MB`);
+      
+      // 効率的なBase64エンコード（メモリ使用量を最適化）
+      let base64Gif: string;
+      try {
+        const chunks = [];
+        const chunkSize = 0x8000; // 32KB chunks
+        for (let i = 0; i < gifData.length; i += chunkSize) {
+          chunks.push(String.fromCharCode(...gifData.slice(i, i + chunkSize)));
+        }
+        base64Gif = btoa(chunks.join(''));
+        console.log(`Base64 encoded size: ${(base64Gif.length / 1024 / 1024).toFixed(2)}MB`);
+      } catch (encodingError) {
+        console.error('Base64 encoding failed:', encodingError);
+        throw new Error('ファイルが大きすぎてエンコードできませんでした。サイズを小さくしてください。');
+      }
       
       setProgress(75);
       
@@ -289,11 +304,34 @@ export default function Home() {
       });
       
       if (!uploadResponse.ok) {
-        const error = await uploadResponse.json();
-        throw new Error(error.error || 'アップロードに失敗しました');
+        let errorMessage = 'アップロードに失敗しました';
+        try {
+          const error = await uploadResponse.json();
+          errorMessage = error.error || errorMessage;
+        } catch (parseError) {
+          console.error('Error response parse failed:', parseError);
+          // レスポンスがJSONでない場合（HTMLエラーページなど）
+          const errorText = await uploadResponse.text();
+          console.error('Error response text:', errorText.substring(0, 200));
+          
+          if (uploadResponse.status === 413) {
+            errorMessage = 'ファイルが大きすぎます。10MB以下にしてください。';
+          } else if (uploadResponse.status === 429) {
+            errorMessage = 'アップロード制限に達しました。時間をおいて再試行してください。';
+          } else {
+            errorMessage = `アップロードエラー (${uploadResponse.status})`;
+          }
+        }
+        throw new Error(errorMessage);
       }
       
-      const uploadResult = await uploadResponse.json();
+      let uploadResult;
+      try {
+        uploadResult = await uploadResponse.json();
+      } catch (parseError) {
+        console.error('Upload response parse failed:', parseError);
+        throw new Error('アップロード完了後のレスポンス解析に失敗しました');
+      }
       setProgress(100);
       
       // 結果をlocalStorageに保存

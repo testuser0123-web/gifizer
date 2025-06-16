@@ -14,10 +14,36 @@ interface ImgurResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const { base64Gif, filename } = await request.json();
+    // リクエストサイズチェック
+    const contentLength = request.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 15 * 1024 * 1024) { // 15MB制限
+      return NextResponse.json({ 
+        error: 'リクエストサイズが大きすぎます。ファイルサイズを小さくしてください。' 
+      }, { status: 413 });
+    }
+
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (parseError) {
+      console.error('Request JSON parse error:', parseError);
+      return NextResponse.json({ 
+        error: 'リクエストデータの解析に失敗しました。ファイルが大きすぎる可能性があります。' 
+      }, { status: 400 });
+    }
+
+    const { base64Gif, filename } = requestData;
     
     if (!base64Gif) {
       return NextResponse.json({ error: 'GIFデータが見つかりません' }, { status: 400 });
+    }
+
+    // Base64データサイズチェック
+    const estimatedSize = (base64Gif.length * 3) / 4; // Base64 -> バイナリ変換の推定サイズ
+    if (estimatedSize > 10 * 1024 * 1024) { // 10MB
+      return NextResponse.json({ 
+        error: `ファイルサイズが大きすぎます (推定${(estimatedSize / 1024 / 1024).toFixed(1)}MB)。Imgurの制限は10MBです。` 
+      }, { status: 413 });
     }
 
     const clientId = process.env.IMGUR_CLIENT_ID;
@@ -56,23 +82,43 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Imgur API error:', response.status, errorText);
+      let errorMessage = 'Imgurへのアップロードに失敗しました';
+      let errorText = '';
       
-      if (response.status === 429) {
-        return NextResponse.json(
-          { error: 'アップロード制限に達しました。しばらく時間をおいてから再試行してください。' },
-          { status: 429 }
-        );
+      try {
+        errorText = await response.text();
+        console.error('Imgur API error:', response.status, errorText);
+        
+        // Imgur APIの具体的なエラーメッセージを解析
+        if (errorText.includes('file is over the size limit') || response.status === 413) {
+          errorMessage = 'ファイルサイズが10MBを超えています。小さなサイズに調整してください。';
+        } else if (response.status === 429) {
+          errorMessage = 'アップロード制限に達しました。しばらく時間をおいてから再試行してください。';
+        } else if (response.status === 400) {
+          errorMessage = 'ファイル形式またはデータが無効です。';
+        } else if (response.status >= 500) {
+          errorMessage = 'Imgurサーバーエラーです。しばらく待ってから再試行してください。';
+        }
+      } catch (textError) {
+        console.error('Error reading Imgur error response:', textError);
       }
       
       return NextResponse.json(
-        { error: 'Imgurへのアップロードに失敗しました' },
+        { error: errorMessage },
         { status: response.status }
       );
     }
 
-    const imgurData: ImgurResponse = await response.json();
+    let imgurData: ImgurResponse;
+    try {
+      imgurData = await response.json();
+    } catch (parseError) {
+      console.error('Imgur response parse error:', parseError);
+      return NextResponse.json(
+        { error: 'Imgurレスポンスの解析に失敗しました' },
+        { status: 500 }
+      );
+    }
     
     if (!imgurData.success) {
       return NextResponse.json(
