@@ -151,8 +151,8 @@ export function ConversionSettingsPanel({
               <div className="flex items-start gap-3 text-xs sm:text-sm text-secondary bg-muted/30 p-3 rounded-lg">
                 <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 flex-shrink-0 text-primary" />
                 <span>
-                  入力すると「© 名前」形式でGIFに透かしが追加されます。
-                  空欄の場合は透かしは追加されません。
+                  著作権情報は変換履歴に記録されます。
+                  現在、GIFへの視覚的な透かし追加は技術的制約により利用できません。
                 </span>
               </div>
             </div>

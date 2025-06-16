@@ -31,38 +31,11 @@ const QUALITY_SETTINGS = {
 export class FFmpegConverter {
   private ffmpeg: FFmpeg | null = null;
   private loaded = false;
-  private drawtextSupported: boolean | null = null;
 
   constructor() {
     // ブラウザ環境でのみFFmpegを初期化
     if (typeof window !== 'undefined') {
       this.ffmpeg = new FFmpeg();
-    }
-  }
-
-  // drawtext フィルターの利用可能性をテスト
-  private async testDrawtextSupport(): Promise<boolean> {
-    if (!this.ffmpeg || this.drawtextSupported !== null) {
-      return this.drawtextSupported ?? false;
-    }
-
-    try {
-      console.log('🧪 Testing drawtext filter support...');
-      
-      // フィルター一覧を取得してdrawtextが含まれているかチェック
-      await this.ffmpeg.exec(['-filters']);
-      
-      // 簡単なテストとして、help コマンドを使用
-      await this.ffmpeg.exec(['-help', 'filter=drawtext']);
-      
-      this.drawtextSupported = true;
-      console.log('✅ drawtext filter is supported');
-      return true;
-      
-    } catch (error) {
-      console.log('❌ drawtext filter is not supported or failed test:', error);
-      this.drawtextSupported = false;
-      return false;
     }
   }
 
@@ -185,46 +158,16 @@ export class FFmpegConverter {
       console.log('Input file size:', fileData.byteLength, 'bytes');
 
       // 実際の設定を使用した変換
-      let videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
+      const videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
       
-      // 著作権テキストを追加 (段階的デバッグ版)
+      // 著作権テキストの処理 (フィルター無効化、メタデータのみ)
       if (settings.copyright.trim()) {
-        // 英数字のみを許可し、短く制限
-        const copyrightText = settings.copyright.trim()
-          .replace(/[^a-zA-Z0-9]/g, '')  // 英数字のみ
-          .substring(0, 10);  // 10文字以下
+        console.log('📝 Copyright info detected:', settings.copyright);
+        console.log('⚠️ Visual overlay not supported in FFmpeg WASM (no font files)');
+        console.log('💡 Copyright information will be stored in conversion metadata only');
         
-        console.log('🔍 Copyright debug info:');
-        console.log('  - Original:', settings.copyright);
-        console.log('  - Cleaned:', copyrightText);
-        console.log('  - Length:', copyrightText.length);
-        
-        if (copyrightText.length >= 2) {
-          // drawtext フィルターのサポートをテスト
-          const isDrawtextSupported = await this.testDrawtextSupport();
-          
-          if (isDrawtextSupported) {
-            console.log('🎨 drawtext filter is supported, adding copyright');
-            
-            // 段階的にテスト
-            console.log('Step 1: Testing basic drawtext...');
-            
-            // 最もシンプルなdrawtext構文でテスト
-            try {
-              // まずは基本的なテストから
-              videoFilter += `,drawtext=text=TEST:x=10:y=10:fontcolor=white`;
-              console.log('✅ Using basic drawtext filter');
-            } catch (filterError) {
-              console.error('❌ Basic drawtext failed:', filterError);
-              // drawtext なしで続行
-            }
-          } else {
-            console.log('⚠️ drawtext filter not supported, skipping copyright overlay');
-            console.log('💡 Copyright will be stored in metadata only');
-          }
-        } else {
-          console.log('Copyright text too short or no valid characters, skipping');
-        }
+        // drawtext フィルターは FFmpeg WASM でフォントファイルが必要なため使用不可
+        // 著作権情報はメタデータとして保存され、履歴に表示される
       }
       
       const args = [
