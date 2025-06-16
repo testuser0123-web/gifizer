@@ -2,19 +2,22 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCloudUpload, faFilm, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
+import { faCloudUpload, faFilm, faExclamationTriangle, faLink } from '@fortawesome/free-solid-svg-icons';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
+  onUrlSelect?: (url: string) => void;
   disabled?: boolean;
 }
 
 const ACCEPTED_FORMATS = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
-export function FileUpload({ onFileSelect, disabled = false }: FileUploadProps) {
+export function FileUpload({ onFileSelect, onUrlSelect, disabled = false }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [url, setUrl] = useState('');
+  const [inputMode, setInputMode] = useState<'file' | 'url'>('file');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): string | null => {
@@ -30,6 +33,32 @@ export function FileUpload({ onFileSelect, disabled = false }: FileUploadProps) 
     }
 
     return null;
+  };
+
+  const validateUrl = (url: string): string | null => {
+    if (!url.trim()) return 'URLが入力されていません';
+    
+    try {
+      const urlObj = new URL(url);
+      
+      // Twitter video URLs validation
+      if (urlObj.hostname === 'video.twimg.com') {
+        if (!url.endsWith('.mp4') && !url.endsWith('.mov')) {
+          return 'サポートされていない動画形式です';
+        }
+        return null;
+      }
+      
+      // Direct video file URLs
+      const extension = '.' + url.split('.').pop()?.toLowerCase();
+      if (ACCEPTED_FORMATS.includes(extension)) {
+        return null;
+      }
+      
+      return 'サポートされていないURL形式です。Twitter動画URL（video.twimg.com）または直接動画ファイルのURLを入力してください';
+    } catch {
+      return '有効なURLを入力してください';
+    }
   };
 
   const handleFile = useCallback((file: File) => {
@@ -75,6 +104,20 @@ export function FileUpload({ onFileSelect, disabled = false }: FileUploadProps) 
     }
   }, [handleFile]);
 
+  const handleUrlSubmit = useCallback(() => {
+    if (!onUrlSelect) return;
+    
+    setError(null);
+    const validationError = validateUrl(url);
+    
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    onUrlSelect(url);
+  }, [url, onUrlSelect]);
+
   const handleClick = () => {
     if (!disabled && fileInputRef.current) {
       fileInputRef.current.click();
@@ -83,17 +126,46 @@ export function FileUpload({ onFileSelect, disabled = false }: FileUploadProps) 
 
   return (
     <div className="w-full">
-      <div
-        className={`
-          drag-area relative cursor-pointer p-6 sm:p-8 md:p-10 text-center
-          ${isDragOver ? 'drag-over' : ''}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5'}
-        `}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={handleClick}
-      >
+      {/* Mode Toggle Tabs */}
+      <div className="flex mb-4 bg-muted/50 rounded-lg p-1">
+        <button
+          onClick={() => setInputMode('file')}
+          className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+            inputMode === 'file' 
+              ? 'bg-white text-foreground shadow-sm' 
+              : 'text-secondary hover:text-foreground'
+          }`}
+          disabled={disabled}
+        >
+          <FontAwesomeIcon icon={faCloudUpload} className="mr-2" />
+          ファイルアップロード
+        </button>
+        <button
+          onClick={() => setInputMode('url')}
+          className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+            inputMode === 'url' 
+              ? 'bg-white text-foreground shadow-sm' 
+              : 'text-secondary hover:text-foreground'
+          }`}
+          disabled={disabled}
+        >
+          <FontAwesomeIcon icon={faLink} className="mr-2" />
+          URL入力
+        </button>
+      </div>
+
+      {inputMode === 'file' ? (
+        <div
+          className={`
+            drag-area relative cursor-pointer p-6 sm:p-8 md:p-10 text-center
+            ${isDragOver ? 'drag-over' : ''}
+            ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5'}
+          `}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={handleClick}
+        >
         <input
           ref={fileInputRef}
           type="file"
@@ -132,6 +204,52 @@ export function FileUpload({ onFileSelect, disabled = false }: FileUploadProps) 
           </div>
         </div>
       </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="text-center p-6 sm:p-8">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FontAwesomeIcon 
+                icon={faLink} 
+                className="text-primary text-xl sm:text-2xl md:text-3xl"
+              />
+            </div>
+            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-foreground mb-2">
+              Twitter動画URLを入力
+            </h3>
+            <p className="text-secondary text-sm md:text-base mb-4">
+              video.twimg.com の動画URLまたは直接動画ファイルのURLを入力してください
+            </p>
+            
+            <div className="max-w-md mx-auto space-y-3">
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://video.twimg.com/amplify_video/..."
+                className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                disabled={disabled}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleUrlSubmit();
+                  }
+                }}
+              />
+              <button
+                onClick={handleUrlSubmit}
+                disabled={disabled || !url.trim()}
+                className="w-full btn btn-primary py-3"
+              >
+                <FontAwesomeIcon icon={faLink} className="mr-2" />
+                URLから動画を読み込み
+              </button>
+            </div>
+            
+            <div className="mt-4 text-xs text-secondary">
+              対応: Twitter動画URL (video.twimg.com) • 直接動画ファイルURL (.mp4, .mov, .avi等)
+            </div>
+          </div>
+        </div>
+      )}
       
       {error && (
         <div className="mt-4 p-3 bg-error/10 border border-error/20 rounded-lg flex items-center gap-2">
