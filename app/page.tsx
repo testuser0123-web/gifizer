@@ -40,7 +40,7 @@ export default function Home() {
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const converterRef = useRef<FFmpegConverter | null>(null);
   const [settings, setSettings] = useState<ConversionSettings>({
-    size: '480px',
+    size: 480,
     quality: 'medium',
     frameRate: 15,
     copyright: ''

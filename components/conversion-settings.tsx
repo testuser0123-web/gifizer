@@ -6,7 +6,7 @@ import { faCog, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { faCopyright } from "@fortawesome/free-regular-svg-icons";
 
 export interface ConversionSettings {
-  size: "320px" | "480px" | "720px";
+  size: number; // Width in pixels (180-720)
   quality: "low" | "medium" | "high";
   frameRate: 10 | 15 | 24;
   copyright: string;
@@ -58,29 +58,33 @@ export function ConversionSettingsPanel({
         {isExpanded && (
           <div className="mt-4 space-y-4 sm:space-y-5 px-2">
             {/* Size Setting */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <label className="block text-sm sm:text-base font-medium text-foreground">
-                サイズ
+                横幅サイズ
               </label>
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                {(["320px", "480px", "720px"] as const).map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => updateSetting("size", size)}
+              <div className="space-y-3">
+                <div className="px-1">
+                  <input
+                    type="range"
+                    min="180"
+                    max="720"
+                    step="5"
+                    value={settings.size}
+                    onChange={(e) => updateSetting("size", Number(e.target.value))}
                     disabled={disabled}
-                    className={`
-                      p-4 text-sm sm:text-base rounded-lg border transition-colors min-h-[48px] font-medium
-                      ${
-                        settings.size === size
-                          ? "border-primary bg-primary text-white shadow-md"
-                          : "border-border bg-card text-foreground hover:bg-muted hover:border-primary/30"
-                      }
-                      ${disabled ? "opacity-50 cursor-not-allowed" : ""}
-                    `}
-                  >
-                    {size}
-                  </button>
-                ))}
+                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed slider"
+                    style={{
+                      background: `linear-gradient(to right, rgb(var(--primary)) 0%, rgb(var(--primary)) ${((settings.size - 180) / (720 - 180)) * 100}%, rgb(var(--muted)) ${((settings.size - 180) / (720 - 180)) * 100}%, rgb(var(--muted)) 100%)`
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-secondary">180px</span>
+                  <div className="flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-lg">
+                    <span className="font-semibold text-primary">{settings.size}px</span>
+                  </div>
+                  <span className="text-secondary">720px</span>
+                </div>
               </div>
             </div>
 

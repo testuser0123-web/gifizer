@@ -10,17 +10,11 @@ export interface ConversionProgress {
 }
 
 export interface ConversionSettings {
-  size: "320px" | "480px" | "720px";
+  size: number; // Width in pixels (180-720)
   quality: "low" | "medium" | "high";
   frameRate: 10 | 15 | 24;
   copyright: string;
 }
-
-const SIZE_SETTINGS = {
-  "320px": 320,
-  "480px": 480,
-  "720px": 720,
-};
 
 const QUALITY_SETTINGS = {
   low: { colors: 64, dither: "bayer:bayer_scale=5" },
@@ -223,7 +217,7 @@ export class FFmpegConverter {
       });
 
       console.log("=== FFmpeg Conversion Settings ===");
-      console.log("Size:", settings.size, "→", SIZE_SETTINGS[settings.size]);
+      console.log("Size:", settings.size, "px");
       console.log(
         "Quality:",
         settings.quality,
@@ -234,9 +228,7 @@ export class FFmpegConverter {
       console.log("Copyright:", settings.copyright);
       console.log("Input file size:", fileData.byteLength, "bytes");
 
-      let videoFilter = `fps=${settings.frameRate},scale=${
-        SIZE_SETTINGS[settings.size]
-      }:-1:flags=lanczos`;
+      let videoFilter = `fps=${settings.frameRate},scale=${settings.size}:-1:flags=lanczos`;
 
       if (settings.copyright.trim()) {
         console.log("📝 Copyright info detected:", settings.copyright);
@@ -244,7 +236,7 @@ export class FFmpegConverter {
         const copyrightText = settings.copyright.trim().substring(0, 15); // 長さ制限
         const fontSize = Math.max(
           12,
-          Math.min(SIZE_SETTINGS[settings.size] / 25, 20)
+          Math.min(settings.size / 25, 20)
         );
 
         // フォントパスをFFmpeg仮想ファイルシステム上のパスに更新
@@ -277,12 +269,7 @@ export class FFmpegConverter {
       args.push("-f", "gif", "-y", outputFileName);
 
       console.log("✅ Using actual user settings:");
-      console.log(
-        "  - Size:",
-        settings.size,
-        "→",
-        SIZE_SETTINGS[settings.size] + "px"
-      );
+      console.log("  - Size:", settings.size + "px");
       console.log("  - FPS:", settings.frameRate);
       console.log("  - Quality:", settings.quality);
       console.log(
