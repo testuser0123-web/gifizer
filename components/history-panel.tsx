@@ -30,9 +30,10 @@ interface HistoryItem {
 
 interface HistoryPanelProps {
   onRefresh?: () => void;
+  refreshTrigger?: number; // 外部から履歴更新をトリガーするため
 }
 
-export function HistoryPanel({ onRefresh }: HistoryPanelProps) {
+export function HistoryPanel({ onRefresh, refreshTrigger }: HistoryPanelProps) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -41,6 +42,13 @@ export function HistoryPanel({ onRefresh }: HistoryPanelProps) {
   useEffect(() => {
     loadHistory();
   }, []);
+
+  // refreshTriggerが変更されたときに履歴を再読み込み
+  useEffect(() => {
+    if (refreshTrigger !== undefined) {
+      loadHistory();
+    }
+  }, [refreshTrigger]);
 
   const loadHistory = () => {
     try {

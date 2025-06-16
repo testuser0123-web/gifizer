@@ -152,20 +152,32 @@ export class FFmpegConverter {
       console.log('Copyright:', settings.copyright);
       console.log('Input file size:', fileData.byteLength, 'bytes');
 
-      // 最もシンプルな変換でテスト
+      // 実際の設定を使用した変換
+      let videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
+      
+      // 著作権テキストを追加
+      if (settings.copyright.trim()) {
+        const copyrightText = settings.copyright.trim().replace(/['"\\]/g, '').replace(/:/g, '\\:');
+        videoFilter += `,drawtext=text='© ${copyrightText}':fontcolor=white:fontsize=16:x=10:y=h-30`;
+        console.log('Adding copyright text:', copyrightText);
+      }
+      
       const args = [
         '-i', inputFileName,
-        '-t', '3', // 最初の3秒のみ
-        '-vf', `fps=10,scale=320:-1`, // 固定設定
+        '-vf', videoFilter,
+        '-gifflags', '+transdiff',
+        '-pix_fmt', 'rgb24',
+        // 動画の長さ制限を削除（-t オプションなし）
         '-f', 'gif',
         '-y', outputFileName
       ];
       
-      console.log('🔧 Using minimal conversion for debugging');
-      console.log('Planned settings (will be applied after debugging):');
-      console.log('  - Size:', settings.size, '→', SIZE_SETTINGS[settings.size]);
+      console.log('✅ Using actual user settings:');
+      console.log('  - Size:', settings.size, '→', SIZE_SETTINGS[settings.size] + 'px');
       console.log('  - FPS:', settings.frameRate);
+      console.log('  - Quality:', settings.quality);
       console.log('  - Copyright:', settings.copyright ? `"${settings.copyright}"` : 'none');
+      console.log('  - Video filter:', videoFilter);
       
       console.log('Single-step GIF conversion args:', args);
       

@@ -36,6 +36,7 @@ export default function Home() {
     frameRate: 15,
     copyright: ''
   });
+  const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
 
   useEffect(() => {
     // クライアントサイドでのみFFmpegConverterを初期化
@@ -131,6 +132,9 @@ export default function Home() {
     setCompletedResult(resultData);
     setProgressStep('completed');
     setIsProcessing(false);
+    
+    // 履歴を更新
+    setHistoryRefreshTrigger(prev => prev + 1);
     
     // 完了音を再生
     try {
@@ -312,6 +316,9 @@ export default function Home() {
       setProgressStep('completed');
       setIsProcessing(false); // 完了時は処理フラグを解除
       
+      // 履歴を更新
+      setHistoryRefreshTrigger(prev => prev + 1);
+      
       // 完了音を再生
       try {
         const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+PyvmQcAjZFOUFTSfHKdyQAgP');
@@ -416,16 +423,18 @@ export default function Home() {
                     disabled={isProcessing}
                   />
                   
-                  {/* Development Test Button */}
-                  <div className="mt-4 text-center">
-                    <button
-                      onClick={testWithSampleVideo}
-                      className="px-4 py-2 text-sm bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
-                      title="Test conversion with sample video (dev only)"
-                    >
-                      🧪 Test with Sample Video
-                    </button>
-                  </div>
+                  {/* Development Test Button - 開発環境でのみ表示 */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="mt-4 text-center">
+                      <button
+                        onClick={testWithSampleVideo}
+                        className="px-4 py-2 text-sm bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+                        title="Test conversion with sample video (dev only)"
+                      >
+                        🧪 Test with Sample Video
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -567,7 +576,10 @@ export default function Home() {
 
           {/* History Panel */}
           <div className="w-full max-w-2xl px-4">
-            <HistoryPanel onRefresh={() => {}} />
+            <HistoryPanel 
+              onRefresh={() => {}} 
+              refreshTrigger={historyRefreshTrigger}
+            />
           </div>
 
           {/* Features Section */}
