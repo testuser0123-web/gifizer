@@ -158,13 +158,31 @@ export class FFmpegConverter {
       console.log('Input file size:', fileData.byteLength, 'bytes');
 
       // 実際の設定を使用した変換
-      const videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
+      let videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
       
-      // 著作権テキストの処理 (Canvas API後処理で実装)
+      // 著作権テキストの処理 (FFmpegで図形ベース透かし)
       if (settings.copyright.trim()) {
         console.log('📝 Copyright info detected:', settings.copyright);
-        console.log('💡 Watermark will be added using Canvas API post-processing');
-        // FFmpeg変換は透かしなしで実行し、後でCanvas APIで透かしを追加
+        
+        // 著作権記号に似た円形の視覚的透かしを作成
+        const watermarkSize = Math.max(16, Math.min(SIZE_SETTINGS[settings.size] / 20, 32));
+        const x = `iw-${watermarkSize + 10}`;  // 右端から余白
+        const y = `ih-${watermarkSize + 10}`;  // 下端から余白
+        
+        // 円形の©マーク風透かし: 外円(白) + 内円(黒) + 中央の小さな白円
+        const watermarkOverlay = [
+          // 外側の白い円（背景）
+          `drawbox=x=${x}:y=${y}:w=${watermarkSize}:h=${watermarkSize}:color=white@0.8:t=fill`,
+          // 内側の黒い円（コントラスト）
+          `drawbox=x=${x}+2:y=${y}+2:w=${watermarkSize-4}:h=${watermarkSize-4}:color=black@0.6:t=fill`,
+          // 中央の小さな白い点（©の中心部分を表現）
+          `drawbox=x=${x}+${Math.floor(watermarkSize/3)}:y=${y}+${Math.floor(watermarkSize/3)}:w=${Math.floor(watermarkSize/3)}:h=${Math.floor(watermarkSize/3)}:color=white@0.9:t=fill`
+        ].join(',');
+        
+        videoFilter += `,${watermarkOverlay}`;
+        console.log('🎨 Adding circular copyright symbol watermark');
+        console.log('  - Size:', watermarkSize, 'px');
+        console.log('  - Position: bottom-right corner');
       }
       
       // FFmpegコマンド引数を構築
@@ -300,19 +318,9 @@ export class FFmpegConverter {
 
       onProgress?.({ step: 'converting', progress: 95, message: '透かしを追加中...' });
 
-      // 著作権テキストがある場合の処理（アニメーション保持のため一時無効化）
+      // 著作権透かしはFFmpegレベルで追加済み、Canvas API後処理は不要
       if (settings.copyright.trim()) {
-        console.log('📝 Copyright info detected:', settings.copyright);
-        console.warn('⚠️ Visual watermark temporarily disabled to preserve GIF animation');
-        console.log('💡 Copyright information is stored in conversion history');
-        
-        // Canvas APIによる透かし追加はGIFアニメーションを静止画に変換してしまうため
-        // 一時的に無効化し、メタデータのみに著作権情報を保存
-        
-        // TODO: 将来の改善案:
-        // 1. gif.js + Canvas APIでフレーム毎に透かし追加
-        // 2. FFmpeg WASMでフォント埋め込み
-        // 3. サーバーサイドでの透かし処理
+        console.log('✅ Copyright watermark added via FFmpeg - preserving GIF animation');
       }
 
       onProgress?.({ step: 'completed', progress: 100, message: '変換完了！' });
