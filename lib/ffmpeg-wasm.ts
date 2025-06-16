@@ -31,11 +31,38 @@ const QUALITY_SETTINGS = {
 export class FFmpegConverter {
   private ffmpeg: FFmpeg | null = null;
   private loaded = false;
+  private drawtextSupported: boolean | null = null;
 
   constructor() {
     // ブラウザ環境でのみFFmpegを初期化
     if (typeof window !== 'undefined') {
       this.ffmpeg = new FFmpeg();
+    }
+  }
+
+  // drawtext フィルターの利用可能性をテスト
+  private async testDrawtextSupport(): Promise<boolean> {
+    if (!this.ffmpeg || this.drawtextSupported !== null) {
+      return this.drawtextSupported ?? false;
+    }
+
+    try {
+      console.log('🧪 Testing drawtext filter support...');
+      
+      // フィルター一覧を取得してdrawtextが含まれているかチェック
+      await this.ffmpeg.exec(['-filters']);
+      
+      // 簡単なテストとして、help コマンドを使用
+      await this.ffmpeg.exec(['-help', 'filter=drawtext']);
+      
+      this.drawtextSupported = true;
+      console.log('✅ drawtext filter is supported');
+      return true;
+      
+    } catch (error) {
+      console.log('❌ drawtext filter is not supported or failed test:', error);
+      this.drawtextSupported = false;
+      return false;
     }
   }
 
@@ -160,17 +187,41 @@ export class FFmpegConverter {
       // 実際の設定を使用した変換
       let videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
       
-      // 著作権テキストを追加 (最小限の実装)
+      // 著作権テキストを追加 (段階的デバッグ版)
       if (settings.copyright.trim()) {
         // 英数字のみを許可し、短く制限
         const copyrightText = settings.copyright.trim()
           .replace(/[^a-zA-Z0-9]/g, '')  // 英数字のみ
           .substring(0, 10);  // 10文字以下
         
-        if (copyrightText.length >= 2) {  // 最低2文字必要
-          // 最もシンプルなdrawtext - fontfileを指定しない
-          videoFilter += `,drawtext=text=${copyrightText}:fontcolor=white:fontsize=12:x=5:y=5`;
-          console.log('Adding copyright text (minimal):', copyrightText);
+        console.log('🔍 Copyright debug info:');
+        console.log('  - Original:', settings.copyright);
+        console.log('  - Cleaned:', copyrightText);
+        console.log('  - Length:', copyrightText.length);
+        
+        if (copyrightText.length >= 2) {
+          // drawtext フィルターのサポートをテスト
+          const isDrawtextSupported = await this.testDrawtextSupport();
+          
+          if (isDrawtextSupported) {
+            console.log('🎨 drawtext filter is supported, adding copyright');
+            
+            // 段階的にテスト
+            console.log('Step 1: Testing basic drawtext...');
+            
+            // 最もシンプルなdrawtext構文でテスト
+            try {
+              // まずは基本的なテストから
+              videoFilter += `,drawtext=text=TEST:x=10:y=10:fontcolor=white`;
+              console.log('✅ Using basic drawtext filter');
+            } catch (filterError) {
+              console.error('❌ Basic drawtext failed:', filterError);
+              // drawtext なしで続行
+            }
+          } else {
+            console.log('⚠️ drawtext filter not supported, skipping copyright overlay');
+            console.log('💡 Copyright will be stored in metadata only');
+          }
         } else {
           console.log('Copyright text too short or no valid characters, skipping');
         }
@@ -196,9 +247,28 @@ export class FFmpegConverter {
       console.log('Single-step GIF conversion args:', args);
       
       try {
-        console.log('Starting FFmpeg execution...');
+        console.log('🚀 Starting FFmpeg execution...');
+        console.log('📝 Full command:', args.join(' '));
+        console.log('🎨 Video filter chain:', videoFilter);
+        
+        // FFmpeg実行前にログ収集を開始
+        const ffmpegLogs: string[] = [];
+        const logHandler = ({ type, message }: { type: string; message: string }) => {
+          ffmpegLogs.push(`[${type}] ${message}`);
+          if (type === 'fferr' || message.toLowerCase().includes('error')) {
+            console.error(`🚨 FFmpeg Error: [${type}] ${message}`);
+          }
+        };
+        
+        this.ffmpeg.on('log', logHandler);
+        
         await this.ffmpeg.exec(args);
-        console.log('✅ FFmpeg execution completed successfully');
+        
+        // ログ監視を停止
+        this.ffmpeg.off('log', logHandler);
+        
+        console.log('✅ FFmpeg execution completed');
+        console.log('📋 FFmpeg execution logs:', ffmpegLogs.slice(-10)); // 最後の10行
         
         // ファイルシステム状態の詳細確認
         try {
