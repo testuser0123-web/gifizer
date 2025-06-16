@@ -53,9 +53,14 @@ export class FFmpegConverter {
         console.log(`FFmpeg progress: ${percent}%`);
       });
 
-      // ログ監視
+      // ログ監視 - より詳細なログを出力
       this.ffmpeg.on('log', ({ type, message }) => {
         console.log(`[FFmpeg ${type}]:`, message);
+        
+        // エラーログの場合は特に注目
+        if (type === 'fferr' || message.includes('Error') || message.includes('error')) {
+          console.error(`🚨 FFmpeg Error Log:`, message);
+        }
       });
 
       // デフォルトのCDNを使用してシンプルに読み込み
@@ -153,19 +158,20 @@ export class FFmpegConverter {
       console.log('Input file size:', fileData.byteLength, 'bytes');
 
       // 実際の設定を使用した変換
-      let videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
+      const videoFilter = `fps=${settings.frameRate},scale=${SIZE_SETTINGS[settings.size]}:-1:flags=lanczos`;
       
-      // 著作権テキストを追加
+      // 著作権テキストを追加 (一時的に無効化してテスト)
       if (settings.copyright.trim()) {
-        // 安全な文字のみを使用し、危険な文字は除去
-        const copyrightText = settings.copyright.trim()
-          .replace(/[^a-zA-Z0-9\s\-_.()]/g, '')  // 安全な文字のみ許可
-          .substring(0, 20);  // 長さ制限
-        
-        if (copyrightText) {
-          videoFilter += `,drawtext=text='(C) ${copyrightText}':fontcolor=white:fontsize=14:x=10:y=h-25`;
-          console.log('Adding copyright text:', copyrightText);
-        }
+        console.log('⚠️ Copyright text feature temporarily disabled for debugging');
+        console.log('  - Original text:', settings.copyright);
+        // TODO: Re-enable after fixing drawtext filter
+        // const copyrightText = settings.copyright.trim()
+        //   .replace(/[^a-zA-Z0-9\s\-_.()]/g, '')
+        //   .substring(0, 20);
+        // if (copyrightText) {
+        //   videoFilter += `,drawtext=text='(C) ${copyrightText}':fontcolor=white:fontsize=14:x=10:y=h-25`;
+        //   console.log('Adding copyright text:', copyrightText);
+        // }
       }
       
       const args = [
@@ -197,16 +203,31 @@ export class FFmpegConverter {
           const files = await this.ffmpeg.listDir('.');
           console.log('📁 Files in FFmpeg FS after conversion:');
           files.forEach(file => {
-            console.log(`  - ${file.name}`);
+            console.log(`  - ${file.name} (${file.isFile ? 'file' : 'dir'})`);
           });
           
           // 出力ファイルの存在確認
-          const outputExists = files.some(file => file.name === outputFileName);
-          console.log(`Output file '${outputFileName}' exists: ${outputExists}`);
+          const outputFile = files.find(file => file.name === outputFileName);
+          console.log(`Output file '${outputFileName}' exists: ${!!outputFile}`);
           
-          if (!outputExists) {
+          if (!outputFile) {
             console.error('❌ Output file was not created by FFmpeg');
+            console.error('Available files:', files.map(f => f.name));
             throw new Error('FFmpegが出力ファイルを生成しませんでした');
+          }
+          
+          // ファイルサイズを事前チェック
+          try {
+            const fileData = await this.ffmpeg.readFile(outputFileName);
+            const fileSize = fileData instanceof Uint8Array ? fileData.byteLength : fileData.length;
+            console.log(`📏 Output file size before read: ${fileSize} bytes`);
+            
+            if (fileSize === 0) {
+              console.error('❌ Output file exists but is empty');
+              throw new Error('FFmpegが空のファイルを生成しました');
+            }
+          } catch (sizeCheckErr) {
+            console.error('Failed to check file size:', sizeCheckErr);
           }
           
         } catch (listErr) {
