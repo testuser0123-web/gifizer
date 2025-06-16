@@ -113,11 +113,11 @@ export function ProgressIndicator({
                       <div className="w-full bg-muted rounded-full h-2">
                         <div
                           className="bg-primary h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${progress}%` }}
+                          style={{ width: `${Math.min(100, progress)}%` }}
                         />
                       </div>
                       <p className="text-xs text-secondary mt-1">
-                        {progress}% 完了
+                        {Math.min(100, progress)}% 完了
                       </p>
                     </div>
                   )}

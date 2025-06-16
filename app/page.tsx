@@ -282,7 +282,7 @@ export default function Home() {
           settings,
           (progress: ConversionProgress) => {
             console.log('Conversion progress:', progress);
-            setProgress(Math.round(progress.progress * 0.7)); // 70%まで変換に使用
+            setProgress(Math.min(70, Math.round(progress.progress * 0.7))); // 70%を超えないよう制限
           }
         );
         console.log('GIF conversion completed, size:', gifData.length);
