@@ -155,7 +155,7 @@ export function ConversionSettingsPanel({
 
             {/* Copyright Setting */}
             <div className="space-y-2">
-              <label className="block text-sm sm:text-base font-medium text-foreground flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm sm:text-base font-medium text-foreground">
                 <FontAwesomeIcon icon={faCopyright} />
                 著作権表示 (オプション)
               </label>

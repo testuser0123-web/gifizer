@@ -57,6 +57,7 @@ export class FFmpegConverter {
 
       console.log("Loading FFmpeg with default CDN...");
 
+      // FFmpeg進行状況の監視を設定（ロード時は使用しない）
       this.ffmpeg.on("progress", ({ progress }) => {
         const percent = Math.round(progress * 100);
         console.log(`FFmpeg progress: ${percent}%`);
@@ -298,6 +299,8 @@ export class FFmpegConverter {
         console.log("🎨 Video filter chain:", videoFilter);
 
         const ffmpegLogs: string[] = [];
+        
+        // ログハンドラー
         const logHandler = ({
           type,
           message,
@@ -311,11 +314,27 @@ export class FFmpegConverter {
           }
         };
 
+        // 進行状況ハンドラー - UIプログレスバーに反映
+        const progressHandler = ({ progress }: { progress: number }) => {
+          const percent = Math.round(progress * 100);
+          console.log(`FFmpeg conversion progress: ${percent}%`);
+          
+          // FFmpegの進行状況を20-80%の範囲でマッピング（前後に準備とクリーンアップがあるため）
+          const mappedProgress = 20 + (progress * 60);
+          onProgress?.({
+            step: "converting",
+            progress: Math.round(mappedProgress),
+            message: `GIF変換中... ${percent}%`,
+          });
+        };
+
         this.ffmpeg.on("log", logHandler);
+        this.ffmpeg.on("progress", progressHandler);
 
         await this.ffmpeg.exec(args);
 
         this.ffmpeg.off("log", logHandler);
+        this.ffmpeg.off("progress", progressHandler);
 
         console.log("✅ FFmpeg execution completed");
         console.log("📋 FFmpeg execution logs:", ffmpegLogs.slice(-10));
