@@ -215,7 +215,7 @@ export class FFmpegConverter {
           const files = await this.ffmpeg.listDir('.');
           console.log('📁 Files in FFmpeg FS after conversion:');
           files.forEach(file => {
-            console.log(`  - ${file.name} (${file.isFile ? 'file' : 'dir'})`);
+            console.log(`  - ${file.name}`);
           });
           
           // 出力ファイルの存在確認
