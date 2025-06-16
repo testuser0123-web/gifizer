@@ -151,8 +151,8 @@ export function ConversionSettingsPanel({
               <div className="flex items-start gap-3 text-xs sm:text-sm text-secondary bg-muted/30 p-3 rounded-lg">
                 <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 flex-shrink-0 text-primary" />
                 <span>
-                  著作権情報は変換履歴に記録・表示されます。
-                  現在、GIFアニメーションを保持するため視覚的透かしは一時的に無効化されています。
+                  著作権情報はGIFファイルのメタデータに埋め込まれ、変換履歴にも記録されます。
+                  視覚的透かしは現在無効化されていますが、ファイル自体に著作権情報が保存されます。
                 </span>
               </div>
             </div>

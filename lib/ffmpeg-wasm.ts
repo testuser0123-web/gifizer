@@ -167,15 +167,23 @@ export class FFmpegConverter {
         // FFmpeg変換は透かしなしで実行し、後でCanvas APIで透かしを追加
       }
       
+      // FFmpegコマンド引数を構築
       const args = [
         '-i', inputFileName,
         '-vf', videoFilter,
         '-gifflags', '+transdiff',
-        '-pix_fmt', 'rgb24',
-        // 動画の長さ制限を削除（-t オプションなし）
-        '-f', 'gif',
-        '-y', outputFileName
+        '-pix_fmt', 'rgb24'
       ];
+      
+      // 著作権情報をGIFメタデータとして埋め込み
+      if (settings.copyright.trim()) {
+        const copyrightComment = `Copyright: ${settings.copyright.trim()}`;
+        args.push('-metadata', `comment=${copyrightComment}`);
+        console.log('📝 Adding copyright to GIF metadata:', copyrightComment);
+      }
+      
+      // 動画の長さ制限を削除（-t オプションなし）
+      args.push('-f', 'gif', '-y', outputFileName);
       
       console.log('✅ Using actual user settings:');
       console.log('  - Size:', settings.size, '→', SIZE_SETTINGS[settings.size] + 'px');
