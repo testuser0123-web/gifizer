@@ -356,15 +356,31 @@ export class FFmpegConverter {
       
       // 透かしテキストを追加
       const fontSize = Math.max(12, Math.min(img.width / 20, 24)); // 動的フォントサイズ
-      ctx.font = `${fontSize}px Arial, sans-serif`;
+      
+      // 日本語対応フォントを指定
+      ctx.font = `${fontSize}px "Noto Sans JP", "Hiragino Sans", "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, "游ゴシック Medium", "Yu Gothic Medium", "游ゴシック体", YuGothic, sans-serif`;
       ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; // 半透明白色
       ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)'; // 黒い縁取り
       ctx.lineWidth = 1;
       
-      const watermarkText = `© ${copyrightText}`;
+      // テキスト長が長すぎる場合は調整
+      let watermarkText = `© ${copyrightText}`;
+      const maxLength = Math.floor(img.width / (fontSize * 0.6)); // 画面幅に基づく文字数制限
+      
+      if (watermarkText.length > maxLength) {
+        watermarkText = watermarkText.substring(0, maxLength - 1) + '…';
+        console.log(`⚠️ Copyright text truncated to fit: "${watermarkText}"`);
+      }
+      
       const textMetrics = ctx.measureText(watermarkText);
-      const x = img.width - textMetrics.width - 10; // 右下に配置
+      let x = img.width - textMetrics.width - 10; // 右下に配置
       const y = img.height - 10;
+      
+      // テキストが画面からはみ出す場合は左に調整
+      if (x < 5) {
+        x = 5;
+        console.log('📐 Adjusted watermark position to prevent overflow');
+      }
       
       // テキストを描画 (縁取り + 塗りつぶし)
       ctx.strokeText(watermarkText, x, y);

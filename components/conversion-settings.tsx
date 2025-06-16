@@ -152,7 +152,7 @@ export function ConversionSettingsPanel({
                 <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 flex-shrink-0 text-primary" />
                 <span>
                   入力すると「© 名前」形式でGIFの右下に透かしが追加されます。
-                  Canvas APIを使用して高品質な透かしを実現します。
+                  日本語（ひらがな・カタカナ・漢字）、英数字、記号に対応。長すぎるテキストは自動調整されます。
                 </span>
               </div>
             </div>
