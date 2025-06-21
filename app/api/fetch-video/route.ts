@@ -13,8 +13,15 @@ export async function POST(request: NextRequest) {
       const urlObj = new URL(url);
       
       // Twitter video URLs or direct video file URLs
-      if (urlObj.hostname !== 'video.twimg.com' && 
-          !url.match(/\.(mp4|mov|avi|mkv|webm)(\?.*)?$/i)) {
+      if (urlObj.hostname === 'video.twimg.com') {
+        // For Twitter video URLs, check if the pathname contains video extensions
+        const pathWithoutQuery = urlObj.pathname;
+        if (!pathWithoutQuery.match(/\.(mp4|mov|avi|mkv|webm)$/i)) {
+          return NextResponse.json({ 
+            error: 'サポートされていないTwitter動画形式です' 
+          }, { status: 400 });
+        }
+      } else if (!url.match(/\.(mp4|mov|avi|mkv|webm)(\?.*)?$/i)) {
         return NextResponse.json({ 
           error: 'サポートされていないURL形式です' 
         }, { status: 400 });

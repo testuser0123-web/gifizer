@@ -43,7 +43,9 @@ export function FileUpload({ onFileSelect, onUrlSelect, disabled = false }: File
       
       // Twitter video URLs validation
       if (urlObj.hostname === 'video.twimg.com') {
-        if (!url.endsWith('.mp4') && !url.endsWith('.mov')) {
+        // Check pathname without query parameters
+        const pathWithoutQuery = urlObj.pathname;
+        if (!pathWithoutQuery.match(/\.(mp4|mov|avi|mkv|webm)$/i)) {
           return 'サポートされていない動画形式です';
         }
         return null;
@@ -132,7 +134,7 @@ export function FileUpload({ onFileSelect, onUrlSelect, disabled = false }: File
           onClick={() => setInputMode('file')}
           className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
             inputMode === 'file' 
-              ? 'bg-white text-foreground shadow-sm' 
+              ? 'bg-card text-foreground shadow-sm' 
               : 'text-secondary hover:text-foreground'
           }`}
           disabled={disabled}
@@ -144,7 +146,7 @@ export function FileUpload({ onFileSelect, onUrlSelect, disabled = false }: File
           onClick={() => setInputMode('url')}
           className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
             inputMode === 'url' 
-              ? 'bg-white text-foreground shadow-sm' 
+              ? 'bg-card text-foreground shadow-sm' 
               : 'text-secondary hover:text-foreground'
           }`}
           disabled={disabled}

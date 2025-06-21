@@ -108,7 +108,8 @@ export default function Home() {
       }
       
       const blob = await response.blob();
-      const filename = url.split('/').pop()?.split('?')[0] || 'twitter-video.mp4';
+      const urlObj = new URL(url);
+      const filename = urlObj.pathname.split('/').pop() || 'twitter-video.mp4';
       const file = new File([blob], filename, { type: blob.type || 'video/mp4' });
       
       setSelectedFile(file);
